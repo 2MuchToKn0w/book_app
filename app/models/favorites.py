@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 class Favorite(Base):
     """
-    Represents a favorite book saved by the user.
+    Represents a favorite book saved by the user
     """
     __tablename__ = 'favorites'
 

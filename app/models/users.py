@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 class User(Base):
     """
-    Represents a user in the system.
+    Represents a user in the system
     """
     __tablename__ = 'users'
 

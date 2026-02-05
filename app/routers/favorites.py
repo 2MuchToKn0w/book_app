@@ -21,7 +21,7 @@ async def get_favorites(
     db: AsyncSession = Depends(get_async_db),
 ) -> FavoriteList:
     """
-      Returns a paginated list of favorite books with detailed information.
+      Returns a paginated list of favorite books with detailed information
       """
 
     #Get total count of selected books and fetch the current page from the database
@@ -49,9 +49,9 @@ async def add_to_favorite(
     db: AsyncSession = Depends(get_async_db),
 ) -> FavoriteSchema:
     """
-       Adds a book to the favorites list by its OLID.
-       Fetches book data from OpenLibraryService and saves it to the database.
-       Returns the created favorite book.
+       Adds a book to the favorites list by its OLID
+       Fetches book data from OpenLibraryService and saves it to the database
+       Returns the created favorite book
        """
 
     # Fetch book data by olid_id via OpenLibraryService
@@ -95,7 +95,7 @@ async def remove_from_favorite(
     db: AsyncSession = Depends(get_async_db),
 ) -> None:
     """
-    Removes a book from the favorites list by its OLID.
+    Removes a book from the favorites list by its OLID
     """
 
     favorite = await db.scalar(

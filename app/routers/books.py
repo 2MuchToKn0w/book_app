@@ -84,7 +84,7 @@ async def search_books(
 @router.get("/{edition_id}", response_model=BookSchema)
 async def get_book_by_edition(edition_id: str, request: Request):
     """
-    Returns detailed book information by edition OLID.
+    Returns detailed book information by edition OLID
     """
     service = request.app.state.open_library_service
     book_data = await service.get_book_by_edition(edition_id)
