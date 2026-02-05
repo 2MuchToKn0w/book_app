@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environment & env vars
+venv/
+.env
+
+# PyCharm
+.idea/
+
+# Windows
+Thumbs.db
+
+# Alembic
+alembic/versions/__pycache__/

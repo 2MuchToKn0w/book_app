@@ -1,16 +1,41 @@
-# This is a sample Python script.
+from fastapi import FastAPI
+import uvicorn
+import httpx
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+from app.routers import books, favorites
+from app.services.open_library import OpenLibraryService
+
+from contextlib import asynccontextmanager
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # startup
+    http_client = httpx.AsyncClient(base_url="https://openlibrary.org")
+    app.state.open_library_service = OpenLibraryService(http_client)
+    yield  # here FastAPI handles requests
+    # shutdown
+    await app.state.open_library_service.client.aclose()
 
 
-# Press the green button in the gutter to run the script.
+# Connecting lifespan to FastAPI
+app = FastAPI(
+    title="FastAPI Library",
+    version="0.1.0",
+    lifespan=lifespan
+)
+
+
+# connecting routers
+app.include_router(books.router)
+app.include_router(favorites.router)
+
+
+# root endpoint
+@app.get("/")
+async def root():
+    return {"message": "Welcome to the Library API"}
+
+
 if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    uvicorn.run('main:app', reload=True)
