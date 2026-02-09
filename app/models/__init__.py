@@ -2,7 +2,7 @@
 from .favorites import Favorite
 from .users import User
 from .reviews import Review
-from .bookshelves import Bookshelf
+from .bookshelves import BookShelf
 from .books_in_shelf import BookInShelf
 
-__all__ = ["Favorite", "User", "Review", "Bookshelf", "BookInShelf"]
+__all__ = ["Favorite", "User", "Review", "BookShelf", "BookInShelf"]
