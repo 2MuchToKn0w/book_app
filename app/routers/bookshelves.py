@@ -8,7 +8,7 @@ from app.models.bookshelves import BookShelf as BookShelfModel
 from app.models.books_in_shelf import BookInShelf as BookInShelfModel
 from app.models.users import User as UserModel
 
-from app.schemas.bookshelves import BookShelf as BookShelfSchema, BookShelfCreate, BookShelfList
+from app.schemas.bookshelves import BookShelf as BookShelfSchema, BookShelfCreate, BookShelfList, BookShelfUpdate
 from app.schemas.books_in_shelf import BookInShelf as BookInShelfSchema, BookAdd
 from app.auth import get_current_user
 
@@ -59,7 +59,13 @@ async def create_bookshelf(
     await db.commit()
     await db.refresh(new_bookshelf)
 
-    return new_bookshelf
+    return BookShelfSchema(
+        id=new_bookshelf.id,
+        name=new_bookshelf.name,
+        description=new_bookshelf.description,
+        created_at=new_bookshelf.created_at,
+        books=[]
+    )
 
 
 @router.get("/", response_model=list[BookShelfSchema])
@@ -157,7 +163,7 @@ async def get_bookshelf(
     """
     Get a specific bookshelf along with full details of all books in it
     """
-    
+
     # Get a specific bookshelf from the database for the current user
     result = await db.execute(
         select(BookShelfModel)
@@ -166,8 +172,12 @@ async def get_bookshelf(
         .options(selectinload(BookShelfModel.books))
     )
     bookshelf = result.scalars().first()
+
     if not bookshelf:
-        raise HTTPException(status_code=404, detail="Bookshelf not found")
+        raise HTTPException(
+            status_code=404,
+            detail="Bookshelf not found"
+        )
 
     # Fetch full information about books via Open Library
     books_full = []
@@ -191,3 +201,121 @@ async def get_bookshelf(
         created_at=bookshelf.created_at,
         books=books_full
     )
+
+
+@router.patch("/{bookshelf_id}", response_model=BookShelfSchema)
+async def update_bookshelf(
+        bookshelf_id: int,
+        bookshelf_data: BookShelfUpdate,
+        db: AsyncSession = Depends(get_async_db),
+        current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Update a specific bookshelf of the current user
+    """
+
+    result = await db.execute(
+        select(BookShelfModel).where(
+            BookShelfModel.id == bookshelf_id,
+            BookShelfModel.user_id == current_user.id,
+        )
+    )
+    bookshelf = result.scalars().first()
+
+    if not bookshelf:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bookshelf not found"
+        )
+
+    if bookshelf_data.name is not None:
+        bookshelf.name = bookshelf_data.name
+
+    if bookshelf_data.description is not None:
+        bookshelf.description = bookshelf_data.description
+
+    await db.commit()
+    await db.refresh(bookshelf)
+
+    return BookShelfSchema(
+        id=bookshelf.id,
+        name=bookshelf.name,
+        description=bookshelf.description,
+        created_at=bookshelf.created_at,
+        books=[]
+    )
+
+
+@router.delete("/{bookshelf_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_bookshelf(
+        bookshelf_id: int,
+        db: AsyncSession = Depends(get_async_db),
+        current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Delete a specific bookshelf of the current user
+    """
+
+    result = await db.execute(
+        select(BookShelfModel).where(
+            BookShelfModel.id == bookshelf_id,
+            BookShelfModel.user_id == current_user.id,
+        )
+    )
+    bookshelf = result.scalars().first()
+
+    if not bookshelf:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bookshelf not found"
+        )
+
+    await db.delete(bookshelf)
+    await db.commit()
+
+    return None
+
+
+@router.delete("/{bookshelf_id}/books/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_book_from_shelf(
+        bookshelf_id: int,
+        book_id: int,
+        db: AsyncSession = Depends(get_async_db),
+        current_user: UserModel = Depends(get_current_user)
+):
+    """
+    Delete a specific book from a user's bookshelf.
+    """
+
+    result = await db.execute(
+        select(BookShelfModel).where(
+            BookShelfModel.id == bookshelf_id,
+            BookShelfModel.user_id == current_user.id
+        )
+    )
+    bookshelf = result.scalars().first()
+
+    if not bookshelf:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bookshelf not found"
+        )
+
+    result = await db.execute(
+        select(BookInShelfModel).where(
+            BookInShelfModel.id == book_id,
+            BookInShelfModel.bookshelf_id == bookshelf.id
+        )
+    )
+    book = result.scalars().first()
+
+    if not book:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found in this bookshelf"
+        )
+
+    await db.delete(book)
+    await db.commit()
+
+    return None

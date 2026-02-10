@@ -95,3 +95,5 @@ async def delete_review(
 
     await db.delete(review_db)
     await db.commit()
+
+    return None

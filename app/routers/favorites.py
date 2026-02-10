@@ -137,3 +137,5 @@ async def remove_from_favorite(
     )
 
     await db.commit()
+
+    return None

@@ -25,6 +25,14 @@ class BookShelfCreate(BaseModel):
     description: str | None = Field(None, description="List description")
 
 
+class BookShelfUpdate(BaseModel):
+    """
+    Schema for updating a bookshelf
+    """
+    name: str | None = Field(None, description="List name")
+    description: str | None = Field(None, description="List description")
+
+
 class BookShelfList(BookShelf):
     """
     Full list of books in a specific BookShelf
