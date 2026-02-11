@@ -176,11 +176,13 @@ async def get_review_list(
     reviews = result.scalars().all()
 
     if not reviews:
-        avg_rating = 0.0
+        avg_rating = None
     else:
         avg_rating = await db.scalar(
-            select(func.avg(ReviewModel.rating)).where(ReviewModel.work_olid == work_olid)
+            select(func.avg(ReviewModel.rating))
+            .where(ReviewModel.work_olid == work_olid)
         )
+        avg_rating = round(float(avg_rating), 2)
 
     return ReviewList(
         avg_rating=avg_rating,

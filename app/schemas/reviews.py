@@ -35,6 +35,6 @@ class ReviewList(BaseModel):
     """
     Schema for returning list of reviews with average rating
     """
-    avg_rating: float = Field(..., ge=1.0, le=5.0, description="Average review rating from 1 to 5")
+    avg_rating: float | None = Field(None, ge=1.0, le=5.0, description="Average review rating from 1 to 5")
     reviews: list[Review] = Field(..., description="List of reviews for the book")
 
