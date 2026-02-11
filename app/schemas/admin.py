@@ -22,3 +22,10 @@ class UpdateUserRole(BaseModel):
     """
     role: Literal['user', 'admin'] | None = Field(None, description="Role of the user")
     is_active: bool | None = Field(None, description="Is active?")
+
+
+class AdminReviewUpdate(BaseModel):
+    """
+    Schema for admin to update a review's comment
+    """
+    comment: str | None = Field(None, description="New text of the review comment")

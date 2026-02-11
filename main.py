@@ -2,7 +2,7 @@ from fastapi import FastAPI
 import uvicorn
 import httpx
 
-from app.routers import books, favorites, users, reviews, bookshelves, admins
+from app.routers import books, favorites, users, reviews, bookshelves, admin
 from app.services.open_library import OpenLibraryService
 
 from contextlib import asynccontextmanager

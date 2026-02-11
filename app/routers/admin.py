@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User as UserModel
-from app.schemas.admins import UserOut, UpdateUserRole
+from app.models.reviews import Review as ReviewModel
+from app.schemas.admin import UserOut, UpdateUserRole, AdminReviewUpdate
+from app.schemas.reviews import Review as ReviewsSchema
 from app.depends import get_async_db
 from app.auth import get_current_admin
 
@@ -13,6 +15,10 @@ router = APIRouter(
     tags=["admin"],
 )
 
+
+#------------------------------#
+# Endpoints for managing users #
+#------------------------------#
 
 @router.get("/users", response_model=list[UserOut])
 async def get_users(
@@ -115,6 +121,71 @@ async def delete_user(
         )
 
     await db.delete(user)
+    await db.commit()
+
+    return None
+
+
+#--------------------------------#
+# Endpoints for managing reviews #
+#--------------------------------#
+
+@router.patch("/reviews/{review_id}", response_model=ReviewsSchema)
+async def update_review(
+        review_id: int,
+        data: AdminReviewUpdate,
+        admin: UserModel = Depends(get_current_admin),
+        db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Update the text of a user's review
+    """
+
+    result = await db.scalars(
+        select(ReviewModel)
+        .where(ReviewModel.id == review_id)
+    )
+    review = result.first()
+
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found"
+        )
+
+    if data.comment is not None:
+        review.comment = data.comment
+
+    db.add(review)
+    await db.commit()
+    await db.refresh(review)
+
+    return review
+
+
+@router.delete("/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_review(
+        review_id: int,
+        admin: UserModel = Depends(get_current_admin),
+        db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Deletes a review by its ID
+    """
+
+    result = await db.scalars(
+        select(ReviewModel)
+        .where(ReviewModel.id == review_id)
+    )
+    review = result.first()
+
+    if not review:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found"
+        )
+
+    await db.delete(review)
     await db.commit()
 
     return None
