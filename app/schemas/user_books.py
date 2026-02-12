@@ -12,6 +12,15 @@ class UserBookAdd(BaseModel):
     rating: int | None = Field(None, ge=1, le=5, description="Rating of the book")
 
 
+class UserBookUpdate(BaseModel):
+    """
+    Schema for updating a book
+    """
+    status: ReadingStatus | None = Field(None, description="Status of the book")
+    progress_percent: int | None = Field(None, ge=0, le=100)
+    rating: int | None = Field(None, ge=1, le=5)
+
+
 class UserBook(BaseModel):
     """
     Returns book information to the user
