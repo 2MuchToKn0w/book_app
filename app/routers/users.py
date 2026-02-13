@@ -5,9 +5,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 import jwt
 
 from app.models.users import User as UserModel
-from app.schemas.users import User as UserSchema, UserCreate, RefreshTokenRequest
+from app.schemas.users import User as UserSchema, UserCreate, UserUpdate, RefreshTokenRequest
 from app.depends import get_async_db
 from app.auth import hash_password, verify_password, create_access_token, create_refresh_token
+from app.auth import get_current_user, get_current_admin
 from app.config import SECRET_KEY, ALGORITHM
 
 
@@ -15,6 +16,123 @@ router = APIRouter(
     prefix="/users",
     tags=["users"],
 )
+
+
+@router.get("/me", response_model=UserSchema)
+async def get_me(
+    current_user: UserModel = Depends(get_current_user),
+):
+    """
+    Get current user info
+    """
+    return current_user
+
+
+@router.get("/", response_model=list[UserSchema])
+async def get_users(
+    admin: UserModel = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Get all users
+    """
+
+    result = await db.scalars(select(UserModel))
+    return result.all()
+
+
+@router.get("/{user_id}", response_model=UserSchema)
+async def get_user(
+    user_id: int,
+    admin: UserModel = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Get a user
+    """
+
+    result = await db.scalars(
+        select(UserModel).where(UserModel.id == user_id)
+    )
+    user = result.first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
+
+@router.patch("/{user_id}", response_model=UserSchema)
+async def update_user(
+    user_id: int,
+    data: UserUpdate,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Update a user's info
+    """
+
+    result = await db.scalars(
+        select(UserModel).where(UserModel.id == user_id)
+    )
+    user = result.first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    is_admin = current_user.role == "admin"
+    is_owner = current_user.id == user_id
+
+    if not (is_admin or is_owner):
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    if not is_admin and data.username is not None:
+        user.username = data.username
+
+    if is_admin:
+        if data.username is not None:
+            user.username = data.username
+        if data.role is not None:
+            user.role = data.role
+        if data.is_active is not None:
+            user.is_active = data.is_active
+
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+
+    return user
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: int,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_async_db),
+):
+    """
+    Delete a user
+    """
+
+    result = await db.scalars(
+        select(UserModel).where(UserModel.id == user_id)
+    )
+    user = result.first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    is_admin = current_user.role == "admin"
+    is_owner = current_user.id == user_id
+
+    if not (is_admin or is_owner):
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    await db.delete(user)
+    await db.commit()
+    return None
+
 
 
 @router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED)

@@ -25,60 +25,13 @@ async def patch_review(
     current_user: UserModel = Depends(get_current_user),
 ):
     """
-    Partially update user's review
+    Update a review:
+    - Owner can update their own review
+    - Admin can update any review
     """
 
     review_db = await db.scalar(
-        select(ReviewModel)
-        .where(ReviewModel.id == review_id)
-    )
-
-    if not review_db:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Review not found",
-        )
-
-    if review_db.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can edit only your own review",
-        )
-
-    # Get only the fields provided in the request (partial update)
-    update_data = review.model_dump(exclude_unset=True)
-
-    if not update_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No data provided for update",
-        )
-
-    # Assign new values to the model object's fields
-    for field, value in update_data.items():
-        setattr(review_db, field, value)
-
-    review_db.updated_at = datetime.now(timezone.utc)
-
-    await db.commit()
-    await db.refresh(review_db)
-
-    return review_db
-
-
-@router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_review(
-        review_id: int,
-        db: AsyncSession = Depends(get_async_db),
-        current_user: UserModel = Depends(get_current_user),
-):
-    """
-    Remove a user's review
-    """
-
-    review_db = await db.scalar(
-        select(ReviewModel)
-        .where(ReviewModel.id == review_id)
+        select(ReviewModel).where(ReviewModel.id == review_id)
     )
 
     if not review_db:
@@ -87,7 +40,55 @@ async def delete_review(
             detail="Review not found",
         )
 
-    if review_db.user_id != current_user.id:
+    if review_db.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can edit only your own review",
+        )
+
+    update_data = review.model_dump(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No data provided for update",
+        )
+
+    for field, value in update_data.items():
+        setattr(review_db, field, value)
+
+    review_db.updated_at = datetime.now(timezone.utc)
+
+    db.add(review_db)
+    await db.commit()
+    await db.refresh(review_db)
+
+    return review_db
+
+
+@router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_review(
+    review_id: int,
+    db: AsyncSession = Depends(get_async_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+    """
+    Delete a review:
+    - Owner can delete their own review
+    - Admin can delete any review
+    """
+
+    review_db = await db.scalar(
+        select(ReviewModel).where(ReviewModel.id == review_id)
+    )
+
+    if not review_db:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Review not found",
+        )
+
+    if review_db.user_id != current_user.id and current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can delete only your own review",

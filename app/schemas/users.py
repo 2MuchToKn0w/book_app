@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from typing import Literal
 
 class UserCreate(BaseModel):
     """
@@ -20,6 +21,15 @@ class User(BaseModel):
     is_active: bool = Field(description="Is active?")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserUpdate(BaseModel):
+    """
+    Schema for updating a user
+    """
+    username: str | None = Field(None, description="Username of the user")
+    role: Literal["user", "admin"] | None = Field(None, description="Role of the user")
+    is_active: bool | None = Field(None, description="Is active?")
 
 
 class RefreshTokenRequest(BaseModel):
