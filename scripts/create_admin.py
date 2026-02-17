@@ -9,7 +9,7 @@ from app.auth import hash_password
 
 # Admin data
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "admin@example.com")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin007")
 ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "admin")
 
 

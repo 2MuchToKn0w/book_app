@@ -18,6 +18,7 @@ WORKDIR $HOME
 
 # ---- Copy project ----
 COPY app app
+COPY scripts scripts
 COPY main.py requirements.txt alembic.ini .env ./
 
 # ---- Install dependencies ----

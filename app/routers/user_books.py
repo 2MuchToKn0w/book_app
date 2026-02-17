@@ -120,7 +120,7 @@ async def get_user_books(
 
     query = (
         select(UserBookModel, BookModel)
-        .join(BookModel, BookModel.work_olid == UserBookModel.work_olid)
+        .outerjoin(BookModel, BookModel.work_olid == UserBookModel.work_olid)
         .where(UserBookModel.user_id == current_user.id)
     )
 
@@ -186,27 +186,45 @@ async def update_user_book(
 
     update_data = book_update.model_dump(exclude_unset=True)
 
-    # status update
+    # Status update
     if "status" in update_data:
         new_status = update_data["status"]
         user_book.status = new_status
 
+        # If the status changed to READING and hasn't been started yet
         if new_status == ReadingStatus.READING and not user_book.started_at:
             user_book.started_at = datetime.now(UTC)
+            user_book.finished_at = None
 
+        # If the status changed to COMPLETED
         if new_status == ReadingStatus.COMPLETED:
-            user_book.finished_at = datetime.now(UTC)
             user_book.progress_percent = 100
-
-    # progress update
-    if "progress_percent" in update_data:
-        user_book.progress_percent = update_data["progress_percent"]
-
-        if update_data["progress_percent"] == 100:
-            user_book.status = ReadingStatus.COMPLETED
+            if not user_book.started_at:
+                user_book.started_at = datetime.now(UTC)
             user_book.finished_at = datetime.now(UTC)
 
-    # rating update
+    # Progress update
+    if "progress_percent" in update_data:
+        new_progress = update_data["progress_percent"]
+
+        if new_progress >= 100:
+            user_book.progress_percent = 100
+            user_book.status = ReadingStatus.COMPLETED
+            if not user_book.started_at:
+                user_book.started_at = datetime.now(UTC)
+            user_book.finished_at = datetime.now(UTC)
+        else:
+            user_book.progress_percent = new_progress
+            # If the status was COMPLETED but the progress was decreased
+            if user_book.status == ReadingStatus.COMPLETED:
+                user_book.status = ReadingStatus.READING
+                user_book.finished_at = None
+
+            # Set started_at if it's still null
+            if user_book.status == ReadingStatus.READING and not user_book.started_at:
+                user_book.started_at = datetime.now(UTC)
+
+    # Rating update
     if "rating" in update_data:
         user_book.rating = update_data["rating"]
 
@@ -214,9 +232,7 @@ async def update_user_book(
     await db.refresh(user_book)
 
     book = await db.scalar(
-        select(BookModel).where(
-            BookModel.work_olid == user_book.work_olid
-        )
+        select(BookModel).where(BookModel.work_olid == user_book.work_olid)
     )
 
     return UserBookSchema(
